@@ -45,6 +45,10 @@
 #define	HW_TYPE		HW_TYPE_RZUSB
 #endif
 
+#ifdef HULUSB
+#define HW_TYPE		HW_TYPE_HULUSB
+#endif
+
 #define debug(...)
 #define error(...)
 

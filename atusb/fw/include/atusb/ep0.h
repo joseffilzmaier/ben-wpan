@@ -36,6 +36,7 @@
 #define	HW_TYPE_101216	1	/* 2010-12-16 */
 #define	HW_TYPE_110131	2	/* 2011-01-31, ATmega32U2-based */
 #define	HW_TYPE_RZUSB	3	/* Atmel Raven USB dongle with at86rf230 */
+#define HW_TYPE_HULUSB	4	/* Busware HUL USB dongle with at86rf212 */
 
 
 /*

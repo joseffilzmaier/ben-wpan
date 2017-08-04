@@ -113,7 +113,7 @@ static void rx_done(void *user)
 	led(0);
 	next_buf(&rx_out);
 	usb_next();
-#ifdef AT86RF230
+#if defined(AT86RF230) || defined(AT86RF212)
 	/* slap at86rf230 - reduce fragmentation issue */
 	change_state(TRX_STATUS_RX_AACK_ON);
 #endif
@@ -190,7 +190,6 @@ bool mac_rx(int on)
 	return 1;
 }
 
-
 static void do_tx(void *user)
 {
 	uint16_t timeout = 0xffff;
@@ -216,7 +215,7 @@ static void do_tx(void *user)
 	 */
 	reg_write(REG_TRX_STATE, TRX_CMD_FORCE_PLL_ON);
 #endif
-#ifdef AT86RF230
+#if defined(AT86RF230) || defined(AT86RF212)
 	/*
 	 * at86rf230 doesn't support force change, nevetherless this works
 	 * somehow

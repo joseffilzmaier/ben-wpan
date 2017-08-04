@@ -157,7 +157,7 @@ uint8_t irq_serial;
 #ifdef ATUSB
 ISR(INT0_vect)
 #endif
-#ifdef RZUSB
+#if defined(RZUSB) || defined(HULUSB)
 ISR(TIMER1_CAPT_vect)
 #endif
 {

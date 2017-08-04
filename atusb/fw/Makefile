@@ -12,7 +12,7 @@
 
 SHELL = /bin/bash
 
-NAME = atusb
+NAME = hulusb
 
 CFLAGS = -g -mmcu=$(CHIP) -DBOOT_ADDR=$(BOOT_ADDR) \
 	 -Wall -Wextra -Wshadow -Werror -Wno-unused-parameter \
@@ -21,6 +21,9 @@ CFLAGS = -g -mmcu=$(CHIP) -DBOOT_ADDR=$(BOOT_ADDR) \
 ifeq ($(NAME),rzusb)
 CHIP=at90usb1287
 CFLAGS += -DRZUSB -DAT86RF230
+else ifeq ($(NAME), hulusb)
+CHIP=at90usb1287
+CFLAGS += -DHULUSB -DAT86RF212
 else
 CHIP=atmega32u2
 CFLAGS += -DATUSB -DAT86RF231
@@ -48,6 +51,9 @@ BOOT_OBJS = boot.o board.o sernum.o spi.o flash.o dfu.o \
 
 
 ifeq ($(NAME),rzusb)
+OBJS += board_rzusb.o
+BOOT_OBJS += board_rzusb.o
+else ifeq ($(NAME), hulusb)
 OBJS += board_rzusb.o
 BOOT_OBJS += board_rzusb.o
 else

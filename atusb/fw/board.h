@@ -21,7 +21,7 @@
 #ifdef ATUSB
 #include "board_atusb.h"
 #endif
-#ifdef RZUSB
+#if defined(RZUSB) || defined(HULUSB)
 #include "board_rzusb.h"
 #endif
 
