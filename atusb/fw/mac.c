@@ -215,7 +215,7 @@ static void do_tx(void *user)
 	 */
 	reg_write(REG_TRX_STATE, TRX_CMD_FORCE_PLL_ON);
 #endif
-#if defined(AT86RF230) || defined(AT86RF212)
+#ifdef AT86RF230
 	/*
 	 * at86rf230 doesn't support force change, nevetherless this works
 	 * somehow

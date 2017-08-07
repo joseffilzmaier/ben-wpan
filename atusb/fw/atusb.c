@@ -23,6 +23,9 @@
 #include "sernum.h"
 #include "spi.h"
 #include "atusb/ep0.h"
+#ifdef DEBUG
+#include "uart.h"
+#endif
 
 
 int main(void)
@@ -35,6 +38,12 @@ int main(void)
 
 	/* now we should be at 8 MHz */
 
+#ifdef DEBUG
+	USART_Init();
+	static FILE atben_stdout = FDEV_SETUP_STREAM(USART_WriteChar, NULL, _FDEV_SETUP_WRITE);
+	stdout = &atben_stdout;
+#endif
+	
 	usb_init();
 	ep0_init();
 #ifdef ATUSB
