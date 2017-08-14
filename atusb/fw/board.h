@@ -21,8 +21,11 @@
 #ifdef ATUSB
 #include "board_atusb.h"
 #endif
-#if defined(RZUSB) || defined(HULUSB)
+#ifdef RZUSB
 #include "board_rzusb.h"
+#endif
+#ifdef HULUSB
+#include "board_hulusb.h"
 #endif
 
 #define	SET_2(p, b)	PORT##p |= 1 << (b)

@@ -29,48 +29,6 @@
 
 uint8_t board_sernum[42] = { 42, USB_DT_STRING };
 
-void reset_rf(void)
-{
-	/* set up all the outputs; default port value is 0 */
-
-	DDRB = 0;
-	DDRC = 0;
-	DDRD = 0;
-	PORTB = 0;
-	PORTC = 0;
-	PORTD = 0;
-
-	OUT(LED);
-	OUT(nRST_RF);   /* this also resets the transceiver */
-	OUT(SLP_TR);
-
-	spi_init();
-
-	/* AT86RF231 data sheet, 12.4.13, reset pulse width: 625 ns (min) */
-
-	CLR(nRST_RF);
-	_delay_us(2);
-	SET(nRST_RF);
-
-	/* 12.4.14: SPI access latency after reset: 625 ns (min) */
-
-	_delay_us(2);
-
-	/* we must restore TRX_CTRL_0 after each reset (9.6.4) */
-
-	set_clkm();
-}
-
-
-void led(bool on)
-{
-	if (on)
-		SET(LED);
-	else
-		CLR(LED);
-}
-
-
 void panic(void)
 {
 	cli();

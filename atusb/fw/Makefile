@@ -61,9 +61,9 @@ endif
 ifeq ($(NAME),rzusb)
 OBJS += board_rzusb.o
 BOOT_OBJS += board_rzusb.o
-else ifeq ($(NAME), hulusb)
-OBJS += board_rzusb.o
-BOOT_OBJS += board_rzusb.o
+else ifeq ($(NAME),hulusb)
+OBJS += board_hulusb.o
+BOOT_OBJS += board_hulusb.o
 else
 OBJS += board_atusb.o
 BOOT_OBJS += board_atusb.o
