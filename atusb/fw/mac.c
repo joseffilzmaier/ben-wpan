@@ -21,6 +21,8 @@
 #include "board.h"
 #include "mac.h"
 
+#include <stdio.h>
+
 #define	RX_BUFS	3
 
 
@@ -159,10 +161,11 @@ bool mac_rx(int on)
 
 static void do_tx(void *user)
 {
+	printf("------- DO TX -------\n");
 	uint16_t timeout = 0xffff;
 	uint8_t status;
 	uint8_t i;
-
+	led(true);
 	/*
 	 * If we time out here, the host driver will time out waiting for the
 	 * TRX_END acknowledgement.
@@ -206,6 +209,10 @@ static void do_tx(void *user)
 
 	change_state(TRX_STATUS_TX_ARET_ON);
 
+	PRINT_STATUS();
+	printf("TRX_CTRL_2: %02x\n", reg_read(REG_TRX_CTRL_2));
+	printf("PHY_CC_CCA: %02x\n", reg_read(REG_PHY_CC_CCA));
+	
 	slp_tr();
 
 	txing = 1;
@@ -217,6 +224,8 @@ static void do_tx(void *user)
 	 */
 	change_state(TRX_CMD_PLL_ON);
 	change_state(TRX_CMD_RX_AACK_ON);
+	led(false);
+	printf("---------------------\n");
 }
 
 

@@ -176,10 +176,7 @@ static bool my_setup(const struct setup_request *setup)
 			
 		case ATUSB_TO_DEV(ATUSB_REG_WRITE):
 			debug("ATUSB_REG_WRITE: %02x -> %02x\n", setup->wIndex, setup->wValue);
-			spi_begin();
-			spi_send(setup->wIndex);
-			spi_send(setup->wValue);
-			spi_end();
+			reg_write(setup->wIndex, setup->wValue);
 			//ep_send_zlp(EP_CTRL);
 			return true;
 		case ATUSB_FROM_DEV(ATUSB_REG_READ):

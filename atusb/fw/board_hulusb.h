@@ -41,6 +41,9 @@
 #define	IRQ_RF_BIT	  	4
 
 #define SR_TX_AUTO_CRC_ON	0x04, 0x20, 5
+#define SR_CHANNEL			0x08, 0x1f, 0
+
+#define RG_CC_CTRL_1		(0x14)
 
 #define SPI_WAIT_DONE()	while ((SPSR & (1 << SPIF)) == 0)
 #define SPI_DATA	SPDR
