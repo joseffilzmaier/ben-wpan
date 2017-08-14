@@ -93,205 +93,216 @@ static bool my_setup(const struct setup_request *setup)
 	unsigned tmp;
 	uint8_t i;
 	uint64_t tmp64;
-
+	debug("setup: {\n");
+	debug("    bmRequestType: %02x\n", setup->bmRequestType);
+	debug("    bRequest: %02x\n", setup->bRequest);
+	debug("    wValue: %02x\n", setup->wValue);
+	debug("    wIndex: %02x\n", setup->wIndex);
+	debug("    wLength: %02x\n", setup->wLength);
+	debug("}\n");
+	
 	switch (req) {
-	case ATUSB_FROM_DEV(ATUSB_ID):
-		debug("ATUSB_ID\n");
-		if (setup->wLength > 3)
-			return 0;
-		usb_send(&eps[0], id, setup->wLength, NULL, NULL);
-		return 1;
-	case ATUSB_FROM_DEV(ATUSB_BUILD):
-		debug("ATUSB_BUILD\n");
-		tmp = build_number;
-		for (i = BUILD_OFFSET-2; tmp; i--) {
-			buf[i] = (tmp % 10)+'0';
-			tmp /= 10;
-		}
-		buf[i] = '#';
-		buf[BUILD_OFFSET-1] = ' ';
-		for (size = 0; build_date[size]; size++)
-			buf[BUILD_OFFSET+size] = build_date[size];
-		size += BUILD_OFFSET-i;
-		if (size > setup->wLength)
-			return 0;
-		usb_send(&eps[0], buf+i, size, NULL, NULL);
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_RESET):
-		debug("ATUSB_RESET\n");
-		reset_cpu();
-		while (1);
-
-	case ATUSB_TO_DEV(ATUSB_RF_RESET):
-		debug("ATUSB_RF_RESET\n");
-		reset_rf();
-		mac_reset();
-		//ep_send_zlp(EP_CTRL);
-		return 1;
-
-	case ATUSB_FROM_DEV(ATUSB_POLL_INT):
-		debug("ATUSB_POLL_INT\n");
-		if (setup->wLength < 1)
-			return 0;
-		*buf = read_irq();
-		usb_send(&eps[0], buf, 1, NULL, NULL);
-		return 1;
-
-	case ATUSB_FROM_DEV(ATUSB_TIMER):
-		debug("ATUSB_TIMER\n");
-		size = setup->wLength;
-		if (size > sizeof(tmp64))
-			size = sizeof(tmp64);
-		tmp64 = timer_read();
-		memcpy(buf, &tmp64, sizeof(tmp64));
-		usb_send(&eps[0], buf, size, NULL, NULL);
-		return 1;
-
-	case ATUSB_FROM_DEV(ATUSB_GPIO):
-		debug("ATUSB_GPIO\n");
-		if (setup->wLength < 3)
-			return 0;
-		if (!gpio(setup->wIndex, setup->wValue, setup->wValue >> 8,
-		    setup->wIndex >> 8, buf))
-			return 0;
-		usb_send(&eps[0], buf, 3, NULL, NULL);
-		return 1;
-	case ATUSB_TO_DEV(ATUSB_GPIO_CLEANUP):
-		gpio_cleanup();
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_SLP_TR):
-		debug("ATUSB_SLP_TR\n");
-		slp_tr();
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_REG_WRITE):
-		debug("ATUSB_REG_WRITE\n");
-		spi_begin();
-		spi_send(AT86RF230_REG_WRITE | setup->wIndex);
-		spi_send(setup->wValue);
-		spi_end();
-		//ep_send_zlp(EP_CTRL);
-		return 1;
-	case ATUSB_FROM_DEV(ATUSB_REG_READ):
-		debug("ATUSB_REG_READ\n");
-		spi_begin();
-		spi_send(AT86RF230_REG_READ | setup->wIndex);
-		*buf = spi_recv();
-		spi_end();
-		usb_send(&eps[0], buf, 1, NULL, NULL);
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_BUF_WRITE):
-		debug("ATUSB_BUF_WRITE\n");
-		if (setup->wLength < 1)
-			return 0;
-		if (setup->wLength > MAX_PSDU)
-			return 0;
-		buf[0] = AT86RF230_BUF_WRITE;
-		buf[1] = setup->wLength;
-		size = setup->wLength+2;
-		usb_recv(&eps[0], buf+2, setup->wLength, do_buf_write, NULL);
-		return 1;
-	case ATUSB_FROM_DEV(ATUSB_BUF_READ):
-		debug("ATUSB_BUF_READ\n");
-		if (setup->wLength < 2)			/* PHR+LQI */
-			return 0;
-		if (setup->wLength > MAX_PSDU+2)	/* PHR+PSDU+LQI */
-			return 0;
-		spi_begin();
-		spi_send(AT86RF230_BUF_READ);
-		size = spi_recv();
-		if (size >= setup->wLength)
-			size = setup->wLength-1;
-		for (i = 0; i != size+1; i++)
-			buf[i] = spi_recv();
-		spi_end();
-		usb_send(&eps[0], buf, size+1, NULL, NULL);
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_SRAM_WRITE):
-		debug("ATUSB_SRAM_WRITE\n");
-		if (setup->wIndex > SRAM_SIZE)
-			return 0;
-		if (setup->wIndex+setup->wLength > SRAM_SIZE)
-			return 0;
-		buf[0] = AT86RF230_SRAM_WRITE;
-		buf[1] = setup->wIndex;
-		size = setup->wLength+2;
-		usb_recv(&eps[0], buf+2, setup->wLength, do_buf_write, NULL);
-		return 1;
-	case ATUSB_FROM_DEV(ATUSB_SRAM_READ):
-		debug("ATUSB_SRAM_READ\n");
-		if (setup->wIndex > SRAM_SIZE)
-			return 0;
-		if (setup->wIndex+setup->wLength > SRAM_SIZE)
-			return 0;
-		spi_begin();
-		spi_send(AT86RF230_SRAM_READ);
-		spi_send(setup->wIndex);
-		for (i = 0; i != setup->wLength; i++)
-			buf[i] = spi_recv();
-		spi_end();
-		usb_send(&eps[0], buf, setup->wLength, NULL, NULL);
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_SPI_WRITE):
-		size = setup->wLength+2;
-		if (size > sizeof(buf))
-			return 0;
-		buf[0] = setup->wValue;
-		buf[1] = setup->wIndex;
-		if (setup->wLength)
-			usb_recv(&eps[0], buf+2, setup->wLength,
-			    do_buf_write, NULL);
-		else
-			do_buf_write(NULL);
-		return 1;
-	case ATUSB_FROM_DEV(ATUSB_SPI_WRITE2_SYNC):
-		spi_begin();
-		spi_send(setup->wValue);
-		spi_send(setup->wIndex);
-		spi_end();
-		buf[0] = irq_serial;
-		if (setup->wLength)
+		case ATUSB_FROM_DEV(ATUSB_ID):
+			debug("ATUSB_ID\n");
+			if (setup->wLength > 3)
+				return false;
+			usb_send(&eps[0], id, setup->wLength, NULL, NULL);
+			return true;
+		case ATUSB_FROM_DEV(ATUSB_BUILD):
+			debug("ATUSB_BUILD\n");
+			tmp = build_number;
+			for (i = BUILD_OFFSET-2; tmp; i--) {
+				buf[i] = (tmp % 10)+'0';
+				tmp /= 10;
+			}
+			buf[i] = '#';
+			buf[BUILD_OFFSET-1] = ' ';
+			for (size = 0; build_date[size]; size++)
+				buf[BUILD_OFFSET+size] = build_date[size];
+			size += BUILD_OFFSET-i;
+			if (size > setup->wLength)
+				return false;
+			usb_send(&eps[0], buf+i, size, NULL, NULL);
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_RESET):
+			debug("ATUSB_RESET\n");
+			reset_cpu();
+			while (1);
+			
+		case ATUSB_TO_DEV(ATUSB_RF_RESET):
+			debug("ATUSB_RF_RESET\n");
+			reset_rf();
+			mac_reset();
+			//ep_send_zlp(EP_CTRL);
+			return true;
+			
+		case ATUSB_FROM_DEV(ATUSB_POLL_INT):
+			debug("ATUSB_POLL_INT\n");
+			if (setup->wLength < 1)
+				return false;
+			*buf = read_irq();
 			usb_send(&eps[0], buf, 1, NULL, NULL);
-		return 1;
-
-	case ATUSB_FROM_DEV(ATUSB_SPI_READ1):
-	case ATUSB_FROM_DEV(ATUSB_SPI_READ2):
-		spi_begin();
-		spi_send(setup->wValue);
-		if (req == ATUSB_FROM_DEV(ATUSB_SPI_READ2))
+			return true;
+			
+		case ATUSB_FROM_DEV(ATUSB_TIMER):
+			debug("ATUSB_TIMER\n");
+			size = setup->wLength;
+			if (size > sizeof(tmp64))
+				size = sizeof(tmp64);
+			tmp64 = timer_read();
+			memcpy(buf, &tmp64, sizeof(tmp64));
+			usb_send(&eps[0], buf, size, NULL, NULL);
+			return true;
+			
+		case ATUSB_FROM_DEV(ATUSB_GPIO):
+			debug("ATUSB_GPIO\n");
+			if (setup->wLength < 3)
+				return false;
+			if (!gpio(setup->wIndex, setup->wValue, setup->wValue >> 8,
+				setup->wIndex >> 8, buf))
+				return 0;
+			usb_send(&eps[0], buf, 3, NULL, NULL);
+			return true;
+		case ATUSB_TO_DEV(ATUSB_GPIO_CLEANUP):
+			debug("ATUSB_GPIO_CLEANUP");
+			gpio_cleanup();
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_SLP_TR):
+			debug("ATUSB_SLP_TR\n");
+			slp_tr();
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_REG_WRITE):
+			debug("ATUSB_REG_WRITE: %02x -> %02x\n", setup->wIndex, setup->wValue);
+			spi_begin();
 			spi_send(setup->wIndex);
-		for (i = 0; i != setup->wLength; i++)
-			buf[i] = spi_recv();
-		spi_end();
-		usb_send(&eps[0], buf, setup->wLength, NULL, NULL);
-		return 1;
-
-	case ATUSB_TO_DEV(ATUSB_RX_MODE):
-		return mac_rx(setup->wValue);
-	case ATUSB_TO_DEV(ATUSB_TX):
-		return mac_tx(setup->wValue, setup->wIndex, setup->wLength);
-	case ATUSB_TO_DEV(ATUSB_EUI64_WRITE):
-		debug("ATUSB_EUI64_WRITE\n");
-		usb_recv(&eps[0], buf, setup->wLength, do_eeprom_write, NULL);
-		_delay_ms(100);
-		reset_cpu();
-		return 1;
-
-	case ATUSB_FROM_DEV(ATUSB_EUI64_READ):
-		debug("ATUSB_EUI64_READ\n");
-		eeprom_read_block(buf, (const void*)0, 8);
-		usb_send(&eps[0], buf, 8, NULL, NULL);
-		return 1;
-
-	default:
-		error("Unrecognized SETUP: 0x%02x 0x%02x ...\n",
-		    setup->bmRequestType, setup->bRequest);
-		return 0;
+			spi_send(setup->wValue);
+			spi_end();
+			//ep_send_zlp(EP_CTRL);
+			return true;
+		case ATUSB_FROM_DEV(ATUSB_REG_READ):
+			debug("ATUSB_REG_READ (%02x) - ", setup->wIndex);
+			spi_begin();
+			spi_send(AT86RF230_REG_READ | setup->wIndex);
+			*buf = spi_recv();
+			spi_end();
+			debug("Response %02x\n", *buf);
+			usb_send(&eps[0], buf, 1, NULL, NULL);
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_BUF_WRITE):
+			debug("ATUSB_BUF_WRITE\n");
+			if (setup->wLength < 1)
+				return false;
+			if (setup->wLength > MAX_PSDU)
+				return false;
+			buf[0] = AT86RF230_BUF_WRITE;
+			buf[1] = setup->wLength;
+			size = setup->wLength+2;
+			usb_recv(&eps[0], buf+2, setup->wLength, do_buf_write, NULL);
+			return true;
+		case ATUSB_FROM_DEV(ATUSB_BUF_READ):
+			debug("ATUSB_BUF_READ\n");
+			if (setup->wLength < 2)			/* PHR+LQI */
+				return false;
+			if (setup->wLength > MAX_PSDU+2)	/* PHR+PSDU+LQI */
+				return false;
+			spi_begin();
+			spi_send(AT86RF230_BUF_READ);
+			size = spi_recv();
+			if (size >= setup->wLength)
+				size = setup->wLength-1;
+			for (i = 0; i != size+1; i++)
+				buf[i] = spi_recv();
+			spi_end();
+			usb_send(&eps[0], buf, size+1, NULL, NULL);
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_SRAM_WRITE):
+			debug("ATUSB_SRAM_WRITE\n");
+			if (setup->wIndex > SRAM_SIZE)
+				return false;
+			if (setup->wIndex+setup->wLength > SRAM_SIZE)
+				return false;
+			buf[0] = AT86RF230_SRAM_WRITE;
+			buf[1] = setup->wIndex;
+			size = setup->wLength+2;
+			usb_recv(&eps[0], buf+2, setup->wLength, do_buf_write, NULL);
+			return true;
+		case ATUSB_FROM_DEV(ATUSB_SRAM_READ):
+			debug("ATUSB_SRAM_READ\n");
+			if (setup->wIndex > SRAM_SIZE)
+				return false;
+			if (setup->wIndex+setup->wLength > SRAM_SIZE)
+				return false;
+			spi_begin();
+			spi_send(AT86RF230_SRAM_READ);
+			spi_send(setup->wIndex);
+			for (i = 0; i != setup->wLength; i++)
+				buf[i] = spi_recv();
+			spi_end();
+			usb_send(&eps[0], buf, setup->wLength, NULL, NULL);
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_SPI_WRITE):
+			size = setup->wLength+2;
+			if (size > sizeof(buf))
+				return false;
+			buf[0] = setup->wValue;
+			buf[1] = setup->wIndex;
+			if (setup->wLength)
+				usb_recv(&eps[0], buf+2, setup->wLength,
+						 do_buf_write, NULL);
+				else
+					do_buf_write(NULL);
+				return true;
+		case ATUSB_FROM_DEV(ATUSB_SPI_WRITE2_SYNC):
+			spi_begin();
+			spi_send(setup->wValue);
+			spi_send(setup->wIndex);
+			spi_end();
+			buf[0] = irq_serial;
+			if (setup->wLength)
+				usb_send(&eps[0], buf, 1, NULL, NULL);
+			return true;
+			
+		case ATUSB_FROM_DEV(ATUSB_SPI_READ1):
+		case ATUSB_FROM_DEV(ATUSB_SPI_READ2):
+			spi_begin();
+			spi_send(setup->wValue);
+			if (req == ATUSB_FROM_DEV(ATUSB_SPI_READ2))
+				spi_send(setup->wIndex);
+			for (i = 0; i != setup->wLength; i++)
+				buf[i] = spi_recv();
+			spi_end();
+			usb_send(&eps[0], buf, setup->wLength, NULL, NULL);
+			return true;
+			
+		case ATUSB_TO_DEV(ATUSB_RX_MODE):
+			debug("ATUSB_RX_MODE\n");
+			return mac_rx(setup->wValue);
+		case ATUSB_TO_DEV(ATUSB_TX):
+			debug("ATUSB_TX\n");
+			return mac_tx(setup->wValue, setup->wIndex, setup->wLength);
+		case ATUSB_TO_DEV(ATUSB_EUI64_WRITE):
+			debug("ATUSB_EUI64_WRITE\n");
+			usb_recv(&eps[0], buf, setup->wLength, do_eeprom_write, NULL);
+			_delay_ms(100);
+			reset_cpu();
+			return true;
+			
+		case ATUSB_FROM_DEV(ATUSB_EUI64_READ):
+			debug("ATUSB_EUI64_READ\n");
+			eeprom_read_block(buf, (const void*)0, 8);
+			usb_send(&eps[0], buf, 8, NULL, NULL);
+			return true;
+			
+		default:
+			error("Unrecognized SETUP: 0x%02x 0x%02x ...\n",
+				  setup->bmRequestType, setup->bRequest);
+			return false;
 	}
 }
 
@@ -302,7 +313,7 @@ static bool my_dfu_setup(const struct setup_request *setup)
 	case DFU_TO_DEV(DFU_DETACH):
 		/* @@@ should use wTimeout */
 		dfu.state = appDETACH;
-		return 1;
+		return true;
 	default:
 		return dfu_setup_common(setup);
 	}

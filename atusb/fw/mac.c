@@ -46,32 +46,6 @@ static inline void next_buf(uint8_t *index)
 	*index = (*index+1) % RX_BUFS;
 }
 
-
-/* ----- Register access --------------------------------------------------- */
-
-
-static uint8_t reg_read(uint8_t reg)
-{
-	uint8_t value;
-
-	spi_begin();
-	spi_send(AT86RF230_REG_READ | reg);
-	value = spi_recv();
-	spi_end();
-
-	return value;
-}
-
-
-static void reg_write(uint8_t reg, uint8_t value)
-{
-	spi_begin();
-	spi_send(AT86RF230_REG_WRITE | reg);
-	spi_send(value);
-	spi_end();
-}
-
-
 /* ----- Interrupt handling ------------------------------------------------ */
 
 
@@ -99,13 +73,6 @@ static void usb_next(void)
 static void tx_ack_done(void *user)
 {
 	usb_next();
-}
-
-static void change_state(uint8_t new)
-{
-	while ((reg_read(REG_TRX_STATUS) & TRX_STATUS_MASK) ==
-	    TRX_STATUS_TRANSITION);
-	reg_write(REG_TRX_STATE, new);
 }
 
 static void rx_done(void *user)
@@ -222,7 +189,12 @@ static void do_tx(void *user)
 	 */
 	reg_write(REG_TRX_STATE, TRX_CMD_PLL_ON);
 #endif
-
+#ifdef AT86RF212
+	reg_write(REG_TRX_STATE, TRX_CMD_FORCE_PLL_ON);
+#endif
+	
+	PRINT_STATUS();
+	
 	handle_irq();
 
 	spi_begin();
