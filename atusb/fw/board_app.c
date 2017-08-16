@@ -154,10 +154,10 @@ static void done(void *user)
 
 uint8_t irq_serial;
 
-#ifdef ATUSB
+#if defined(ATUSB) | defined(HULUSB)
 ISR(INT0_vect)
 #endif
-#if defined(RZUSB) || defined(HULUSB)
+#ifdef RZUSB
 ISR(TIMER1_CAPT_vect)
 #endif
 {
