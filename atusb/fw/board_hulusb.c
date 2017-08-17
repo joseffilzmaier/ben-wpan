@@ -174,10 +174,9 @@ void usb_init(void)
 
 void board_app_init(void)
 {
-	/* enable timer input capture 1, trigger on rising edge */
-	TCCR1B = (1 << ICES1);
-	TIFR1 = (1 << ICF1);
-	TIMSK1 = (1 << ICIE1);
+	/* enable INT0, trigger on rising edge */
+	EICRA = 1 << ISC01 | 1 << ISC00;
+	EIMSK = 1 << 0;
 }
 
 #ifdef DEBUG
