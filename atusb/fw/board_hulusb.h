@@ -61,6 +61,8 @@ void spi_init(void);
 #ifdef DEBUG
 void printStatus(void);
 #define PRINT_STATUS() printStatus()
+#else
+#define PRINT_STATUS()
 #endif
 
 #endif /* !BOARD_HULUSB_H */

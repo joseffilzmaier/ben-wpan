@@ -13,7 +13,7 @@
 SHELL = /bin/bash
 
 NAME = hulusb
-DEBUG = true
+DEBUG = false
 
 CFLAGS = -g -mmcu=$(CHIP) -DBOOT_ADDR=$(BOOT_ADDR) \
 	 -Wall -Wextra -Wshadow -Werror -Wno-unused-parameter \

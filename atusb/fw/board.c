@@ -36,7 +36,6 @@ void change_state(uint8_t new)
 	while ((reg_read(REG_TRX_STATUS) & TRX_STATUS_MASK) ==
 		TRX_STATUS_TRANSITION);
 	reg_write(REG_TRX_STATE, new);
-	PRINT_STATUS();
 }
 
 uint8_t reg_read(uint8_t reg)
