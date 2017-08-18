@@ -24,6 +24,9 @@
 #ifdef RZUSB
 #include "board_rzusb.h"
 #endif
+#ifdef HULUSB
+#include "board_hulusb.h"
+#endif
 
 #define	SET_2(p, b)	PORT##p |= 1 << (b)
 #define	CLR_2(p, b)	PORT##p &= ~(1 << (b))
@@ -82,5 +85,11 @@ void gpio_cleanup(void);
 void get_sernum(void);
 
 void board_app_init(void);
+
+uint8_t reg_read(uint8_t reg);
+uint8_t subreg_read(uint8_t address, uint8_t mask, uint8_t position);
+void reg_write(uint8_t reg, uint8_t value);
+void subreg_write(uint8_t address, uint8_t mask, uint8_t position, uint8_t value);
+void change_state(uint8_t new);
 
 #endif /* !BOARD_H */

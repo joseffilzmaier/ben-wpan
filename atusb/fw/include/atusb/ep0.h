@@ -32,11 +32,6 @@
 #define EP0ATUSB_MAJOR	0	/* EP0 protocol, major revision */
 #define EP0ATUSB_MINOR	3	/* EP0 protocol, minor revision */
 
-#define	HW_TYPE_100813	0	/* 2010-08-13 */
-#define	HW_TYPE_101216	1	/* 2010-12-16 */
-#define	HW_TYPE_110131	2	/* 2011-01-31, ATmega32U2-based */
-#define	HW_TYPE_RZUSB	3	/* Atmel Raven USB dongle with at86rf230 */
-
 
 /*
  * bmRequestType:

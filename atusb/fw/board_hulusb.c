@@ -1,8 +1,8 @@
 /*
- * fw/board_atusb.c - ATUSB Board-specific functions (for boot loader and application)
+ * fw/board_hulusb.c - Busware HUL Board-specific functions (for boot loader and application)
  *
- * Written 2016 by Stefan Schmidt
- * Copyright 2016 Stefan Schmidt
+ * Written 2017 by Filzmaier Josef
+ * Based on fw/board_rzusb written and Copyright 2016 Stefan Schmidt
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,50 +40,67 @@ void reset_rf(void)
 	PORTC = 0;
 	PORTD = 0;
 
-	OUT(LED);
+	OUT(LED_RED);
+	OUT(LED_GREEN);
+	SET(LED_RED); /* Leds are active low on HULUSB board */
+	CLR(LED_GREEN); /* Green Led indicates the dongle is running */
 	OUT(nRST_RF);   /* this also resets the transceiver */
 	OUT(SLP_TR);
 
 	spi_init();
 
-	/* AT86RF231 data sheet, 12.4.13, reset pulse width: 625 ns (min) */
+	/* AT86RF212 data sheet, Appendix B, p166 Power-On Reset procedure */
+	/*-----------------------------------------------------------------*/
+	CLR(SLP_TR);
+	SET(nRST_RF);
+	SET(nSS);
+	_delay_us(400);
 
 	CLR(nRST_RF);
 	_delay_us(2);
 	SET(nRST_RF);
 
-	/* 12.4.14: SPI access latency after reset: 625 ns (min) */
+	/* 5.1.4.5: Wait t10: 625 ns (min) */
 
 	_delay_us(2);
 
-	/* we must restore TRX_CTRL_0 after each reset (9.6.4) */
+	reg_write(REG_TRX_CTRL_0, 0x19);
+
+	change_state(TRX_CMD_FORCE_TRX_OFF);
+	/*-----------------------------------------------------------------*/
+
+	/* we must restore TRX_CTRL_0 after each reset (7.7.4) */
 
 	set_clkm();
 }
 
+void led_red(bool on) {
+	if (on)
+		CLR(LED_RED);
+	else
+		SET(LED_RED);
+}
+
+void led_green(bool on) {
+	if (on)
+		CLR(LED_GREEN);
+	else
+		SET(LED_GREEN);
+}
+
 void led(bool on)
 {
-	if (on)
-		SET(LED);
-	else
-		CLR(LED);
+	led_red(on);
 }
 
 void set_clkm(void)
 {
-	/* switch CLKM to 8 MHz */
+	/* CLKM is not connected on BUSWARE HUL and therefore it is running in
+	 * async mode. */
+	reg_write(REG_TRX_CTRL_0, 0x00);
 
-	/*
-	 * @@@ Note: Atmel advise against changing the external clock in
-	 * mid-flight. We should therefore switch to the RC clock first, then
-	 * crank up the external clock, and finally switch back to the external
-	 * clock. The clock switching procedure is described in the ATmega32U2
-	 * data sheet in secton 8.2.2.
-	 */
-	spi_begin();
-	spi_send(AT86RF230_REG_WRITE | REG_TRX_CTRL_0);
-	spi_send(CLKM_CTRL_8MHz);
-	spi_end();
+	/* TX_AUTO_CRC_ON, default disabled */
+	subreg_write(SR_TX_AUTO_CRC_ON, 1);
 }
 
 void board_init(void)
@@ -93,11 +110,11 @@ void board_init(void)
 	MCUSR = 0;		/* Remove override */
 	WDTCSR |= 1 << WDCE;	/* Enable change */
 	WDTCSR = 1 << WDCE;	/* Disable watchdog while still enabling
-				   change */
+	change */
 
 	CLKPR = 1 << CLKPCE;
-	/* We start with a 1 MHz/8 clock. Disable the prescaler. */
-	CLKPR = 0;
+	/* We start with a 16 MHz/8 clock. Put the prescaler to 2. */
+	CLKPR = 1 << CLKPS0;
 
 	get_sernum();
 }
@@ -112,7 +129,7 @@ void spi_begin(void)
 void spi_off(void)
 {
 	spi_initialized = 0;
-	UCSR1B = 0;
+	SPCR &= ~(1 << SPE);
 }
 
 void spi_init(void)
@@ -123,12 +140,8 @@ void spi_init(void)
 	OUT(nSS);
 	IN(MISO);
 
-	UBRR1 = 0;	/* set bit rate to zero to begin */
-	UCSR1C = 1 << UMSEL11 | 1 << UMSEL10;
-			/* set MSPI, MSB first, SPI data mode 0 */
-	UCSR1B = 1 << RXEN1 | 1 << TXEN1;
-			/* enable receiver and transmitter */
-	UBRR1 = 0;	/* reconfirm the bit rate */
+	SPCR = (1 << SPE) | (1 << MSTR);
+	SPSR = (1 << SPI2X);
 
 	spi_initialized = 1;
 }
@@ -138,18 +151,22 @@ void usb_init(void)
 	USBCON |= 1 << FRZCLK;		/* freeze the clock */
 
 	/* enable the PLL and wait for it to lock */
-	PLLCSR &= ~(1 << PLLP2 | 1 << PLLP1 | 1 << PLLP0);
+	/* TODO sheet page 50 For Atmel AT90USB128x only. Do not use with Atmel AT90USB64x. */
+	/*  FOR 8 XTAL Mhz only!!! */
+	PLLCSR = ((1 << PLLP1) | (1 << PLLP0));
 	PLLCSR |= 1 << PLLE;
 	while (!(PLLCSR & (1 << PLOCK)));
 
-	USBCON &= ~(1 << USBE);		/* reset the controller */
-	USBCON |= 1 << USBE;
+	UHWCON |= (1 << UVREGE);
+
+	USBCON &= ~((1 << USBE) | (1 << OTGPADE));		/* reset the controller */
+	USBCON |= ((1 << USBE) | (1 << OTGPADE));
 
 	USBCON &= ~(1 << FRZCLK);	/* thaw the clock */
 
 	UDCON &= ~(1 << DETACH);	/* attach the pull-up */
 	UDIEN = 1 << EORSTE;		/* enable device interrupts  */
-//	UDCON |= 1 << RSTCPU;		/* reset CPU on bus reset */
+	//	UDCON |= 1 << RSTCPU;		/* reset CPU on bus reset */
 
 	ep_init();
 }
@@ -158,5 +175,5 @@ void board_app_init(void)
 {
 	/* enable INT0, trigger on rising edge */
 	EICRA = 1 << ISC01 | 1 << ISC00;
-	EIMSK = 1 << 0;
+	EIMSK = 1 << INT0;
 }

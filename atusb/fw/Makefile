@@ -26,6 +26,9 @@ endif
 ifeq ($(NAME),rzusb)
 CHIP=at90usb1287
 CFLAGS += -DRZUSB -DAT86RF230
+else ifeq ($(NAME),hulusb)
+CHIP=at90usb1287
+CFLAGS += -DHULUSB -DAT86RF212
 else
 CHIP=atmega32u2
 CFLAGS += -DATUSB -DAT86RF231
@@ -58,6 +61,9 @@ endif
 ifeq ($(NAME),rzusb)
 OBJS += board_rzusb.o
 BOOT_OBJS += board_rzusb.o
+else ifeq ($(NAME),hulusb)
+OBJS += board_hulusb.o
+BOOT_OBJS += board_hulusb.o
 else
 OBJS += board_atusb.o
 BOOT_OBJS += board_atusb.o

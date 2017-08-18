@@ -38,11 +38,15 @@
 #include "mac.h"
 
 #ifdef ATUSB
-#define	HW_TYPE		HW_TYPE_110131
+#define	HW_TYPE		ATUSB_HW_TYPE_110131
 #endif
 
 #ifdef RZUSB
-#define	HW_TYPE		HW_TYPE_RZUSB
+#define	HW_TYPE		ATUSB_HW_TYPE_RZUSB
+#endif
+
+#ifdef HULUSB
+#define HW_TYPE		ATUSB_HW_TYPE_HULUSB
 #endif
 
 #ifdef DEBUG
