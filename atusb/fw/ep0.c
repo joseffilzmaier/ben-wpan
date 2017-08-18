@@ -45,8 +45,15 @@
 #define	HW_TYPE		HW_TYPE_RZUSB
 #endif
 
+#ifdef DEBUG
+#include "uart.h"
+#include <stdio.h>
+#define debug(FORMAT,args...) printf(FORMAT,##args)
+#define error(FORMAT,args...) printf(FORMAT,##args)
+#else
 #define debug(...)
 #define error(...)
+#endif
 
 
 static const uint8_t id[] = { EP0ATUSB_MAJOR, EP0ATUSB_MINOR, HW_TYPE };

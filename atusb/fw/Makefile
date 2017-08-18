@@ -1,5 +1,5 @@
 #
-# Makefile - Makefile of the ATUSB firmware 
+# Makefile - Makefile of the ATUSB firmware
 #
 # Written 2010-2011, 2013 by Werner Almesberger
 # Copyright 2010-2011, 2013 by Werner Almesberger
@@ -13,10 +13,15 @@
 SHELL = /bin/bash
 
 NAME = atusb
+DEBUG = false
 
 CFLAGS = -g -mmcu=$(CHIP) -DBOOT_ADDR=$(BOOT_ADDR) \
 	 -Wall -Wextra -Wshadow -Werror -Wno-unused-parameter \
 	 -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes
+
+ifeq ($(DEBUG),true)
+CFLAGS += -DDEBUG
+endif
 
 ifeq ($(NAME),rzusb)
 CHIP=at90usb1287
@@ -46,6 +51,9 @@ OBJS = atusb.o board.o board_app.o sernum.o spi.o descr.o ep0.o \
 BOOT_OBJS = boot.o board.o sernum.o spi.o flash.o dfu.o \
             dfu_common.o usb.o boot-atu2.o
 
+ifeq ($(DEBUG),true)
+OBJS +=  uart.o
+endif
 
 ifeq ($(NAME),rzusb)
 OBJS += board_rzusb.o
